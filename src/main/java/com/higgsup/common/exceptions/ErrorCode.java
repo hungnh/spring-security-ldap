@@ -1,0 +1,10 @@
+package com.higgsup.common.exceptions;
+
+public enum ErrorCode {
+    AUTHENTICATION_FAILED,
+    AUTHORIZATION_FAILED,
+    BAD_CREDENTIALS,
+    ACCESS_TOKEN_EXPIRED,
+    ACCESS_TOKEN_INVALID,
+    INTERNAL_SERVER_ERROR;
+}
