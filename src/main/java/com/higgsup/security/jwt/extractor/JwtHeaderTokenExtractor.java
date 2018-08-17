@@ -1,7 +1,7 @@
 package com.higgsup.security.jwt.extractor;
 
-import com.higgsup.security.constants.SecurityConstants;
 import com.higgsup.common.exceptions.ErrorMessage;
+import com.higgsup.security.constants.SecurityConstants;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;

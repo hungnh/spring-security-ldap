@@ -1,1 +1,9 @@
-server-work
+# Intellij
+*.iml
+
+## Directory-based project format:
+.idea/
+
+# Maven
+log/
+target/

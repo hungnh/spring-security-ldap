@@ -1,6 +1,7 @@
-https://spring.io/guides/topicals/spring-security-architecture/
-https://www.toptal.com/java/rest-security-with-jwt-spring-security-and-java
-http://www.svlada.com/jwt-token-authentication-with-spring-boot/
+Spring Security JWT
++ https://spring.io/guides/topicals/spring-security-architecture/
++ https://www.toptal.com/java/rest-security-with-jwt-spring-security-and-java
++ http://www.svlada.com/jwt-token-authentication-with-spring-boot/
 
 Role-based security
 + http://forum.spring.io/forum/spring-projects/security/108482-difference-between-secured-rolesallowed-preauthorize

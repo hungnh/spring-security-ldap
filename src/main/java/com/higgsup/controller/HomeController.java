@@ -2,7 +2,6 @@ package com.higgsup.controller;
 
 import com.higgsup.security.annotation.AllowAdmin;
 import com.higgsup.security.annotation.AllowHigger;
-import com.higgsup.security.context.SecurityContextFacade;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

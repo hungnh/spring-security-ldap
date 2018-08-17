@@ -1,9 +1,9 @@
 package com.higgsup.security.config.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.higgsup.security.model.LoginResponse;
 import com.higgsup.security.jwt.token.JwtToken;
 import com.higgsup.security.jwt.token.JwtTokenFactory;
+import com.higgsup.security.model.LoginResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
