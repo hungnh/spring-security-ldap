@@ -1,4 +1,4 @@
-package com.higgsup.security.model;
+package com.higgsup.security.dto;
 
 import java.io.Serializable;
 

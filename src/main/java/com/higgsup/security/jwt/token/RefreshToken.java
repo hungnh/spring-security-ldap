@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 
 import java.util.List;
+import java.util.Optional;
 
 public class RefreshToken implements JwtToken {
 
@@ -14,13 +15,13 @@ public class RefreshToken implements JwtToken {
         this.claims = claims;
     }
 
-    public static RefreshToken create(RawJwtToken token, String signingKey) {
+    public static Optional<RefreshToken> create(RawJwtToken token, String signingKey) {
         Jws<Claims> claims = token.parseClaims(signingKey);
         List<String> scopes = claims.getBody().get(SecurityConstants.JWT_SCOPE_CLAIM, List.class);
         if (scopes == null || scopes.isEmpty() || !scopes.contains(Scope.REFRESH_TOKEN.authority())) {
-            return null;
+            return Optional.empty();
         }
-        return new RefreshToken(claims);
+        return Optional.of(new RefreshToken(claims));
     }
 
     @Override

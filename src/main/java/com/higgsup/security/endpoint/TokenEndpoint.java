@@ -2,29 +2,29 @@ package com.higgsup.security.endpoint;
 
 import com.higgsup.common.exceptions.ErrorMessage;
 import com.higgsup.dto.GenericResponseDTO;
+import com.higgsup.security.entity.AppUser;
 import com.higgsup.security.exceptions.JwtInvalidTokenException;
 import com.higgsup.security.jwt.JwtSettings;
 import com.higgsup.security.jwt.extractor.TokenExtractor;
 import com.higgsup.security.jwt.storage.TokenStore;
 import com.higgsup.security.jwt.token.*;
 import com.higgsup.security.jwt.verifier.TokenVerifier;
-import com.higgsup.security.ldap.LdapUtils;
+import com.higgsup.security.user.IUserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
-import org.springframework.ldap.core.DirContextOperations;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.ldap.search.LdapUserSearch;
-import org.springframework.security.ldap.userdetails.LdapAuthoritiesPopulator;
-import org.springframework.security.ldap.userdetails.LdapUserDetailsMapper;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Collection;
-import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.higgsup.security.constants.SecurityConstants.TOKEN_INVALIDATE_ENTRY_POINT;
 import static com.higgsup.security.constants.SecurityConstants.TOKEN_REFRESH_ENTRY_POINT;
@@ -37,26 +37,20 @@ public class TokenEndpoint {
     private final JwtTokenFactory tokenFactory;
     private final TokenStore invalidTokenStore;
     private final TokenVerifier tokenVerifier;
-    private final LdapUserSearch ldapUserSearch;
-    private final LdapAuthoritiesPopulator ldapAuthoritiesPopulator;
-    private final LdapUserDetailsMapper ldapUserDetailsMapper;
+    private final IUserService userService;
 
     public TokenEndpoint(JwtSettings jwtSettings,
                          TokenExtractor tokenExtractor,
                          JwtTokenFactory tokenFactory,
                          TokenStore invalidTokenStore,
                          TokenVerifier tokenVerifier,
-                         LdapUserSearch ldapUserSearch,
-                         LdapAuthoritiesPopulator ldapAuthoritiesPopulator,
-                         LdapUserDetailsMapper ldapUserDetailsMapper) {
+                         IUserService userService) {
         this.jwtSettings = jwtSettings;
         this.tokenExtractor = tokenExtractor;
         this.tokenFactory = tokenFactory;
         this.invalidTokenStore = invalidTokenStore;
         this.tokenVerifier = tokenVerifier;
-        this.ldapUserSearch = ldapUserSearch;
-        this.ldapAuthoritiesPopulator = ldapAuthoritiesPopulator;
-        this.ldapUserDetailsMapper = ldapUserDetailsMapper;
+        this.userService = userService;
     }
 
     @GetMapping(TOKEN_REFRESH_ENTRY_POINT)
@@ -64,10 +58,8 @@ public class TokenEndpoint {
         String tokenPayload = tokenExtractor.extract(request.getHeader(jwtSettings.getRequestHeader()));
 
         RawJwtToken rawJwtToken = new RawJwtToken(tokenPayload);
-        RefreshToken refreshToken = RefreshToken.create(rawJwtToken, jwtSettings.getTokenSigningKey());
-        if (refreshToken == null) {
-            throw new JwtInvalidTokenException(rawJwtToken, ErrorMessage.REFRESH_TOKEN_INVALID, null);
-        }
+        RefreshToken refreshToken = RefreshToken.create(rawJwtToken, jwtSettings.getTokenSigningKey())
+                .orElseThrow(() -> new JwtInvalidTokenException(rawJwtToken, ErrorMessage.REFRESH_TOKEN_INVALID, null));
 
         String jti = refreshToken.getJti();
         if (!tokenVerifier.verify(jti)) {
@@ -76,22 +68,17 @@ public class TokenEndpoint {
 
         String username = refreshToken.getSubject();
 
-        DirContextOperations userContext = ldapUserSearch.searchForUser(username);
-        Collection<? extends GrantedAuthority> roles = ldapAuthoritiesPopulator.getGrantedAuthorities(userContext, username);
-        if (roles == null || roles.isEmpty()) {
-            throw new InsufficientAuthenticationException(ErrorMessage.USER_HAS_NO_ROLES);
-        }
+        AppUser appUser = userService.getByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException(ErrorMessage.USERNAME_NOT_FOUND + username));
 
-        Jws<Claims> claims = refreshToken.getClaims();
-        Date tokenCreatedDate = claims.getBody().getIssuedAt();
-        Date lastPasswordResetDate = LdapUtils.getLastPasswordResetDateFromContext(userContext);
-        if (lastPasswordResetDate != null && tokenCreatedDate.before(lastPasswordResetDate)) {
-            throw new JwtInvalidTokenException(rawJwtToken, ErrorMessage.REFRESH_TOKEN_INVALID, null);
-        }
+        if (appUser.getRoles() == null) throw new InsufficientAuthenticationException(ErrorMessage.USER_HAS_NO_ROLES);
+        List<GrantedAuthority> authorities = appUser.getRoles().stream()
+                .map(authority -> new SimpleGrantedAuthority(authority.getRole().authority()))
+                .collect(Collectors.toList());
 
-        UserDetails userDetails = ldapUserDetailsMapper.mapUserFromContext(userContext, username, roles);
+        UserDetails authenticatedUser = new User(username, null, authorities);
 
-        return tokenFactory.createJwtAccessToken(userDetails);
+        return tokenFactory.createJwtAccessToken(authenticatedUser);
     }
 
     @PostMapping(TOKEN_INVALIDATE_ENTRY_POINT)

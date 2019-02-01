@@ -19,6 +19,6 @@ public class JwtHeaderTokenExtractor implements TokenExtractor {
             throw new AuthenticationServiceException(ErrorMessage.AUTHORIZATION_HEADER_INVALID);
         }
 
-        return header.substring(SecurityConstants.AUTHORIZATION_HEADER_PREFIX.length(), header.length());
+        return header.substring(SecurityConstants.AUTHORIZATION_HEADER_PREFIX.length());
     }
 }

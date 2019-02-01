@@ -1,18 +1,18 @@
 package com.higgsup.security.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.higgsup.security.config.filter.CustomCorsFilter;
 import com.higgsup.security.config.filter.JwtAuthenticationFilter;
 import com.higgsup.security.config.filter.UsernamePasswordAuthenticationFilter;
 import com.higgsup.security.config.handler.JwtAuthenticationSuccessHandler;
 import com.higgsup.security.config.handler.UsernamePasswordAuthenticationSuccessHandler;
 import com.higgsup.security.config.provider.JwtAuthenticationProvider;
+import com.higgsup.security.config.provider.UsernamePasswordAuthenticationProvider;
 import com.higgsup.security.jwt.JwtSettings;
 import com.higgsup.security.jwt.extractor.TokenExtractor;
-import com.higgsup.security.ldap.LdapSettings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.ldap.core.support.LdapContextSource;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -20,7 +20,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.ldap.userdetails.LdapAuthoritiesPopulator;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 
@@ -39,11 +40,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     private RestAuthenticationEntryPoint authenticationEntryPoint;
     private AuthenticationFailureHandler authenticationFailureHandler;
     private UsernamePasswordAuthenticationSuccessHandler usernamePasswordAuthenticationSuccessHandler;
+    private UsernamePasswordAuthenticationProvider usernamePasswordAuthenticationProvider;
     private JwtAuthenticationProvider jwtAuthenticationProvider;
     private JwtAuthenticationSuccessHandler jwtAuthenticationSuccessHandler;
-    private LdapContextSource ldapContextSource;
-    private LdapAuthoritiesPopulator ldapAuthoritiesPopulator;
-    private LdapSettings ldapSettings;
     private ObjectMapper objectMapper;
     private TokenExtractor tokenExtractor;
     private JwtSettings jwtSettings;
@@ -55,40 +54,32 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http
-                .csrf().disable() // we don't need CSRF for JWT based authentication
-
-                .exceptionHandling()
-                .authenticationEntryPoint(authenticationEntryPoint)
-
-                .and()
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // we don't want the session created for security purposes as we are using tokens for each request
-
-                .and()
-                .authorizeRequests()
-                .antMatchers(LOGIN_ENTRY_POINT).permitAll() // Login end-point -> Permit
-                .antMatchers(TOKEN_REFRESH_ENTRY_POINT).permitAll() // Token refresh end-point -> Permit
-                .antMatchers(TOKEN_BASED_AUTH_ENTRY_POINT).fullyAuthenticated() // Protected API End-points
-
-                .and()
-                .addFilterBefore(buildUsernamePasswordAuthenticationFilter(), BasicAuthenticationFilter.class)
-                .addFilterBefore(buildJwtAuthenticationFilter(), BasicAuthenticationFilter.class);
+    protected void configure(AuthenticationManagerBuilder auth) {
+        auth.authenticationProvider(usernamePasswordAuthenticationProvider);
+        auth.authenticationProvider(jwtAuthenticationProvider);
     }
 
     @Override
-    public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth
-                .ldapAuthentication() // LDAP Authentication Provider
-                .contextSource(ldapContextSource)
-                .ldapAuthoritiesPopulator(ldapAuthoritiesPopulator)
-                .userSearchBase(ldapSettings.getUserSearchBase())
-                .userSearchFilter(ldapSettings.getUserSearchFilter())
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .csrf().disable() // we don't need CSRF for JWT based authentication
 
-                .and()
-                .authenticationProvider(jwtAuthenticationProvider) // JWT Authentication Provider
-        ;
+            .exceptionHandling()
+            .authenticationEntryPoint(authenticationEntryPoint)
+
+            .and()
+                .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // we don't want the session created for security purposes as we are using tokens for each request
+
+            .and()
+                .authorizeRequests()
+                .antMatchers(LOGIN_ENTRY_POINT, TOKEN_REFRESH_ENTRY_POINT).permitAll() // Login end-point, Token refresh end-point -> Permit all
+                .antMatchers(TOKEN_BASED_AUTH_ENTRY_POINT).fullyAuthenticated() // Protected API End-points
+
+            .and()
+                .addFilterBefore(buildUsernamePasswordAuthenticationFilter(), BasicAuthenticationFilter.class) // add filters
+                .addFilterBefore(buildJwtAuthenticationFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(new CustomCorsFilter(), UsernamePasswordAuthenticationFilter.class);
     }
 
     private Filter buildUsernamePasswordAuthenticationFilter() {
@@ -138,6 +129,11 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     @Autowired
+    public void setUsernamePasswordAuthenticationProvider(UsernamePasswordAuthenticationProvider usernamePasswordAuthenticationProvider) {
+        this.usernamePasswordAuthenticationProvider = usernamePasswordAuthenticationProvider;
+    }
+
+    @Autowired
     public void setJwtAuthenticationProvider(JwtAuthenticationProvider jwtAuthenticationProvider) {
         this.jwtAuthenticationProvider = jwtAuthenticationProvider;
     }
@@ -150,21 +146,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     public void setAuthenticationManager(AuthenticationManager authenticationManager) {
         this.authenticationManager = authenticationManager;
-    }
-
-    @Autowired
-    public void setLdapContextSource(LdapContextSource ldapContextSource) {
-        this.ldapContextSource = ldapContextSource;
-    }
-
-    @Autowired
-    public void setLdapAuthoritiesPopulator(LdapAuthoritiesPopulator ldapAuthoritiesPopulator) {
-        this.ldapAuthoritiesPopulator = ldapAuthoritiesPopulator;
-    }
-
-    @Autowired
-    public void setLdapSettings(LdapSettings ldapSettings) {
-        this.ldapSettings = ldapSettings;
     }
 
     @Autowired

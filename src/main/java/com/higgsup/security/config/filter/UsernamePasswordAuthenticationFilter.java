@@ -3,12 +3,13 @@ package com.higgsup.security.config.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.higgsup.common.exceptions.ErrorMessage;
 import com.higgsup.security.exceptions.AuthenticationMethodNotSupportedException;
-import com.higgsup.security.model.LoginRequest;
+import com.higgsup.security.dto.LoginRequest;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -51,10 +52,10 @@ public class UsernamePasswordAuthenticationFilter extends AbstractAuthentication
             throw new AuthenticationServiceException(ErrorMessage.MISSING_USER_NAME_OR_PASSWORD);
         }
 
-        UsernamePasswordAuthenticationToken authenticationToken
+        UsernamePasswordAuthenticationToken authToken
                 = new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword());
 
-        return this.getAuthenticationManager().authenticate(authenticationToken);
+        return this.getAuthenticationManager().authenticate(authToken);
     }
 
     @Override
@@ -71,6 +72,7 @@ public class UsernamePasswordAuthenticationFilter extends AbstractAuthentication
                                               HttpServletResponse response,
                                               AuthenticationException failed)
             throws IOException, ServletException {
+        SecurityContextHolder.clearContext();
         authFailureHandler.onAuthenticationFailure(request, response, failed);
     }
 }

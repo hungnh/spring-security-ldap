@@ -3,7 +3,7 @@ package com.higgsup.security.config.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.higgsup.security.jwt.token.JwtToken;
 import com.higgsup.security.jwt.token.JwtTokenFactory;
-import com.higgsup.security.model.LoginResponse;
+import com.higgsup.security.dto.LoginResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,7 +24,8 @@ public class UsernamePasswordAuthenticationSuccessHandler implements Authenticat
     private final JwtTokenFactory tokenFactory;
 
     @Autowired
-    public UsernamePasswordAuthenticationSuccessHandler(ObjectMapper objectMapper, JwtTokenFactory tokenFactory) {
+    public UsernamePasswordAuthenticationSuccessHandler(ObjectMapper objectMapper,
+                                                        JwtTokenFactory tokenFactory) {
         this.objectMapper = objectMapper;
         this.tokenFactory = tokenFactory;
     }
