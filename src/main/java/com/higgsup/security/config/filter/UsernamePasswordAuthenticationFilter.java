@@ -48,12 +48,12 @@ public class UsernamePasswordAuthenticationFilter extends AbstractAuthentication
 
         LoginRequest loginRequest = objectMapper.readValue(request.getReader(), LoginRequest.class);
 
-        if (StringUtils.isEmpty(loginRequest.getUsername()) || StringUtils.isEmpty(loginRequest.getPassword())) {
+        if (StringUtils.isEmpty(loginRequest.getEmail()) || StringUtils.isEmpty(loginRequest.getPassword())) {
             throw new AuthenticationServiceException(ErrorMessage.MISSING_USER_NAME_OR_PASSWORD);
         }
 
         UsernamePasswordAuthenticationToken authToken
-                = new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword());
+                = new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword());
 
         return this.getAuthenticationManager().authenticate(authToken);
     }
